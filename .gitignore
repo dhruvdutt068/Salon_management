@@ -3,6 +3,10 @@ node_modules/
 vendor/
 .pnp
 .pnp.js
+.venv/
+env/
+__pycache__/
+*.pyc
 
 # Environment variables
 .env
@@ -19,6 +23,7 @@ out/
 .next/
 .cache/
 *.log
+*.tsbuildinfo
 
 # OS & IDE metadata
 .DS_Store
