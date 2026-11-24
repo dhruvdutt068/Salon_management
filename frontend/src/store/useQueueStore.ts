@@ -17,6 +17,14 @@ export interface JoinQueueResult {
   existingToken?: string;
 }
 
+export interface TodayStats {
+  served: number;
+  avgWait: number;
+  noShows: number;
+  activeQueue: number;
+  revenue: number;
+}
+
 interface QueueState {
   isQueueOpen: boolean;
   barbers: Barber[];
@@ -27,6 +35,9 @@ interface QueueState {
   // Actions
   toggleQueueOpen: () => void;
   setBarberStatus: (barberId: string, status: Barber['status']) => void;
+  toggleBarberOnDuty: (barberId: string) => void;
+  toggleServiceActive: (serviceId: string) => void;
+  updateServicePriceAndDuration: (serviceId: string, durationMinutes: number, price: number) => void;
   getWaitingCount: () => number;
   getTotalEstimatedWait: () => number;
   calculateEstimatedWait: (selectedDurationMinutes: number, preferredBarberId?: string) => number;
@@ -41,6 +52,7 @@ interface QueueState {
   completeBarberService: (barberId: string) => void;
   toggleBarberBreak: (barberId: string) => void;
   getNextCustomerForBarber: (barberId: string) => QueueEntry | undefined;
+  getTodayStats: () => TodayStats;
   setSimulatedPosition: (token: string, pos: number) => void;
 }
 
@@ -197,6 +209,31 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       barbers: state.barbers.map((b) => (b.id === barberId ? { ...b, status } : b)),
     })),
 
+  toggleBarberOnDuty: (barberId) =>
+    set((state) => ({
+      barbers: state.barbers.map((b) => {
+        if (b.id === barberId) {
+          const isCurrentlyBreak = b.status === 'On Break';
+          return { ...b, status: isCurrentlyBreak ? 'Available' : 'On Break' };
+        }
+        return b;
+      }),
+    })),
+
+  toggleServiceActive: (serviceId) =>
+    set((state) => ({
+      services: state.services.map((s) =>
+        s.id === serviceId ? { ...s, isActive: !s.isActive } : s
+      ),
+    })),
+
+  updateServicePriceAndDuration: (serviceId, durationMinutes, price) =>
+    set((state) => ({
+      services: state.services.map((s) =>
+        s.id === serviceId ? { ...s, durationMinutes, price } : s
+      ),
+    })),
+
   getWaitingCount: () => {
     return get().queue.filter((item) => item.status === 'Waiting').length;
   },
@@ -245,9 +282,10 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     return { inQueue: !!existing, entry: existing };
   },
 
-  joinQueue: ({ customerName, customerPhone, serviceIds, preferredBarberId }) => {
+  joinQueue: ({ customerName, customerPhone, serviceIds, preferredBarberId, isWalkIn }) => {
     const state = get();
-    if (!state.isQueueOpen) {
+    // Online join is prevented when queue is closed, but walk-ins are still allowed
+    if (!state.isQueueOpen && !isWalkIn) {
       return { success: false, error: 'queue_closed' };
     }
 
@@ -458,6 +496,29 @@ export const useQueueStore = create<QueueState>((set, get) => ({
         item.status === 'Waiting' &&
         (!item.preferredBarberId || item.preferredBarberId === barberId)
     );
+  },
+
+  getTodayStats: () => {
+    const queue = get().queue;
+    const completed = queue.filter((q) => q.status === 'Completed');
+    const noShows = queue.filter((q) => q.status === 'No-show');
+    const waiting = queue.filter((q) => q.status === 'Waiting');
+
+    // Baseline stats + live increments
+    const baseServed = 18;
+    const totalServed = baseServed + completed.length;
+    const totalRevenue = 4250 + completed.reduce((acc, q) => acc + q.totalPrice, 0);
+
+    const totalWait = waiting.reduce((acc, q) => acc + q.estimatedWaitMinutes, 0);
+    const avgWait = waiting.length > 0 ? Math.round(totalWait / waiting.length) : 25;
+
+    return {
+      served: totalServed,
+      avgWait,
+      noShows: 2 + noShows.length,
+      activeQueue: waiting.length,
+      revenue: totalRevenue,
+    };
   },
 
   updateEntryStatus: (token: string, newStatus: QueueStatus, barberId?: string) => {

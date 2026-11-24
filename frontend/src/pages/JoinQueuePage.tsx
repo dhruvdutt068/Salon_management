@@ -56,8 +56,11 @@ export const JoinQueuePage: React.FC = () => {
     }
   };
 
+  // Only show active services (turning off in admin immediately hides from join queue)
+  const availableServices = services.filter((s) => s.isActive);
+
   // Calculate live summary
-  const activeSelectedServices = services.filter((s) => selectedServices.includes(s.id));
+  const activeSelectedServices = availableServices.filter((s) => selectedServices.includes(s.id));
   const totalDuration = activeSelectedServices.reduce((acc, s) => acc + s.durationMinutes, 0);
   const totalPrice = activeSelectedServices.reduce((acc, s) => acc + s.price, 0);
   const estimatedWait = calculateEstimatedWait(totalDuration, selectedBarber);
@@ -261,7 +264,7 @@ export const JoinQueuePage: React.FC = () => {
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {services.map((service) => {
+            {availableServices.map((service) => {
               const isSelected = selectedServices.includes(service.id);
               const isDisabled = !isSelected && selectedServices.length >= 3;
 
