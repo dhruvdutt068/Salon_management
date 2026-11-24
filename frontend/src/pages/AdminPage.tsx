@@ -34,6 +34,7 @@ export const AdminPage: React.FC = () => {
     barbers,
     toggleBarberOnDuty,
     getTodayStats,
+    resetToDefaultData,
   } = useQueueStore();
 
   const stats = getTodayStats();
@@ -73,9 +74,23 @@ export const AdminPage: React.FC = () => {
           <p className="text-xs sm:text-sm text-gray-400 mt-1">{t('adminDesc')}</p>
         </div>
 
-        <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-[#D4A017] border border-[#D4A017]/30">
-          Owner Control Center
-        </span>
+        <div className="flex items-center space-x-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm('Reset queue and barbers back to fresh demo defaults?')) {
+                resetToDefaultData();
+              }
+            }}
+            className="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 transition-all cursor-pointer min-h-[44px] flex items-center space-x-1.5"
+            title="Reset to fresh demo data"
+          >
+            <span>Reset Demo Data</span>
+          </button>
+          <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 text-[#D4A017] border border-[#D4A017]/30 min-h-[44px] flex items-center">
+            Owner Control Center
+          </span>
+        </div>
       </div>
 
       {/* Master Switch: Online Queue Open/Close */}

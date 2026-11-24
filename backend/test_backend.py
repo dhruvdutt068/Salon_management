@@ -6,8 +6,15 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from fastapi.testclient import TestClient
 from app.main import app
+from app.db.session import engine
+from app.models.base import Base
+from app.db.init_db import init_db
 
 def run_tests():
+    # Ensure fresh test database state
+    Base.metadata.drop_all(bind=engine)
+    init_db()
+
     with TestClient(app) as client:
         print("--- 1. Health Check ---")
         res = client.get("/health")
@@ -104,7 +111,7 @@ def run_tests():
         print("Cancellation only in 'Waiting' status verified!")
 
         print("--- 7. Walk-in & Barber Preference Assignment ---")
-        # Join another customer for Imran
+        # Join customer with unique phone for Imran
         walkin_payload = {
             "customer_name": "Aakash Mehta",
             "customer_phone": "9833445566",
