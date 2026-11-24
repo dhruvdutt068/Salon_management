@@ -54,153 +54,158 @@ interface QueueState {
   getNextCustomerForBarber: (barberId: string) => QueueEntry | undefined;
   getTodayStats: () => TodayStats;
   setSimulatedPosition: (token: string, pos: number) => void;
+  resetToDefaultData: () => void;
 }
+
+export const INITIAL_BARBERS: Barber[] = [
+  {
+    id: 'b-ravi',
+    name: 'Ravi',
+    status: 'Busy',
+    currentCustomerToken: 'S-008',
+    currentCustomerName: 'Rohan Gupta',
+    serviceStartTime: new Date(Date.now() - 18 * 60000).toISOString(),
+  },
+  {
+    id: 'b-amit',
+    name: 'Amit',
+    status: 'Busy',
+    currentCustomerToken: 'S-009',
+    currentCustomerName: 'Kunal Patel',
+    serviceStartTime: new Date(Date.now() - 5 * 60000).toISOString(),
+  },
+  {
+    id: 'b-imran',
+    name: 'Imran',
+    status: 'On Break',
+  },
+];
+
+export const INITIAL_QUEUE: QueueEntry[] = [
+  {
+    id: 'q-1',
+    token: 'S-008',
+    customerName: 'Rohan Gupta',
+    customerPhone: '9811002211',
+    serviceIds: ['s-haircut'],
+    preferredBarberId: 'b-ravi',
+    assignedBarberId: 'b-ravi',
+    status: 'In Chair',
+    joinedAt: new Date(Date.now() - 40 * 60000).toISOString(),
+    startedAt: new Date(Date.now() - 18 * 60000).toISOString(),
+    totalDurationMinutes: 30,
+    totalPrice: 150,
+    estimatedWaitMinutes: 0,
+    positionInQueue: 0,
+  },
+  {
+    id: 'q-2',
+    token: 'S-009',
+    customerName: 'Kunal Patel',
+    customerPhone: '9876543210',
+    serviceIds: ['s-haircut', 's-beard'],
+    preferredBarberId: 'b-amit',
+    assignedBarberId: 'b-amit',
+    status: 'Called',
+    joinedAt: new Date(Date.now() - 30 * 60000).toISOString(),
+    calledAt: new Date(Date.now() - 5 * 60000).toISOString(),
+    totalDurationMinutes: 45,
+    totalPrice: 230,
+    estimatedWaitMinutes: 5,
+    positionInQueue: 1,
+  },
+  {
+    id: 'q-3',
+    token: 'S-010',
+    customerName: 'Devang Joshi',
+    customerPhone: '9877001122',
+    serviceIds: ['s-haircut'],
+    preferredBarberId: 'b-amit',
+    status: 'Waiting',
+    joinedAt: new Date(Date.now() - 25 * 60000).toISOString(),
+    totalDurationMinutes: 30,
+    totalPrice: 150,
+    estimatedWaitMinutes: 15,
+    positionInQueue: 2,
+  },
+  {
+    id: 'q-4',
+    token: 'S-011',
+    customerName: 'Priya Verma',
+    customerPhone: '9899112233',
+    serviceIds: ['s-spa'],
+    preferredBarberId: undefined, // Any Barber
+    status: 'Waiting',
+    joinedAt: new Date(Date.now() - 20 * 60000).toISOString(),
+    totalDurationMinutes: 45,
+    totalPrice: 400,
+    estimatedWaitMinutes: 30,
+    positionInQueue: 3,
+  },
+  {
+    id: 'q-5',
+    token: 'S-012',
+    customerName: 'Karan Mehra',
+    customerPhone: '9811223344',
+    serviceIds: ['s-beard', 's-massage'],
+    preferredBarberId: 'b-ravi',
+    status: 'Waiting',
+    joinedAt: new Date(Date.now() - 65 * 60000).toISOString(), // >60m amber
+    totalDurationMinutes: 35,
+    totalPrice: 200,
+    estimatedWaitMinutes: 65,
+    positionInQueue: 4,
+  },
+  {
+    id: 'q-6',
+    token: 'S-013',
+    customerName: 'Aarav Shah',
+    customerPhone: '9844556677',
+    serviceIds: ['s-haircut'],
+    preferredBarberId: 'b-imran',
+    status: 'Waiting',
+    joinedAt: new Date(Date.now() - 15 * 60000).toISOString(),
+    totalDurationMinutes: 30,
+    totalPrice: 150,
+    estimatedWaitMinutes: 50,
+    positionInQueue: 5,
+  },
+  {
+    id: 'q-7',
+    token: 'S-014',
+    customerName: 'Vikram Singh',
+    customerPhone: '9833221100',
+    serviceIds: ['s-haircut', 's-beard'],
+    preferredBarberId: undefined, // Any Barber
+    status: 'Waiting',
+    joinedAt: new Date(Date.now() - 70 * 60000).toISOString(), // >60m amber
+    totalDurationMinutes: 45,
+    totalPrice: 230,
+    estimatedWaitMinutes: 70,
+    positionInQueue: 6,
+  },
+  {
+    id: 'q-8',
+    token: 'S-015',
+    customerName: 'Neha Sharma',
+    customerPhone: '9877889900',
+    serviceIds: ['s-color'],
+    preferredBarberId: undefined, // Any Barber
+    status: 'Waiting',
+    joinedAt: new Date(Date.now() - 80 * 60000).toISOString(), // >60m amber
+    totalDurationMinutes: 60,
+    totalPrice: 500,
+    estimatedWaitMinutes: 85,
+    positionInQueue: 7,
+  },
+];
 
 export const useQueueStore = create<QueueState>((set, get) => ({
   isQueueOpen: true,
-  barbers: [
-    {
-      id: 'b-ravi',
-      name: 'Ravi',
-      status: 'Busy',
-      currentCustomerToken: 'S-008',
-      currentCustomerName: 'Rohan Gupta',
-      serviceStartTime: new Date(Date.now() - 18 * 60000).toISOString(),
-    },
-    {
-      id: 'b-amit',
-      name: 'Amit',
-      status: 'Busy',
-      currentCustomerToken: 'S-009',
-      currentCustomerName: 'Kunal Patel',
-      serviceStartTime: new Date(Date.now() - 5 * 60000).toISOString(),
-    },
-    {
-      id: 'b-imran',
-      name: 'Imran',
-      status: 'On Break',
-    },
-  ],
+  barbers: INITIAL_BARBERS,
   services: DUMMY_SERVICES,
   tokenCounter: 16, // Next token will be S-016
-  queue: [
-    {
-      id: 'q-1',
-      token: 'S-008',
-      customerName: 'Rohan Gupta',
-      customerPhone: '9811002211',
-      serviceIds: ['s-haircut'],
-      preferredBarberId: 'b-ravi',
-      assignedBarberId: 'b-ravi',
-      status: 'In Chair',
-      joinedAt: new Date(Date.now() - 40 * 60000).toISOString(),
-      startedAt: new Date(Date.now() - 18 * 60000).toISOString(),
-      totalDurationMinutes: 30,
-      totalPrice: 150,
-      estimatedWaitMinutes: 0,
-      positionInQueue: 0,
-    },
-    {
-      id: 'q-2',
-      token: 'S-009',
-      customerName: 'Kunal Patel',
-      customerPhone: '9876543210',
-      serviceIds: ['s-haircut', 's-beard'],
-      preferredBarberId: 'b-amit',
-      assignedBarberId: 'b-amit',
-      status: 'Called',
-      joinedAt: new Date(Date.now() - 30 * 60000).toISOString(),
-      calledAt: new Date(Date.now() - 5 * 60000).toISOString(),
-      totalDurationMinutes: 45,
-      totalPrice: 230,
-      estimatedWaitMinutes: 5,
-      positionInQueue: 1,
-    },
-    {
-      id: 'q-3',
-      token: 'S-010',
-      customerName: 'Devang Joshi',
-      customerPhone: '9877001122',
-      serviceIds: ['s-haircut'],
-      preferredBarberId: 'b-amit',
-      status: 'Waiting',
-      joinedAt: new Date(Date.now() - 25 * 60000).toISOString(),
-      totalDurationMinutes: 30,
-      totalPrice: 150,
-      estimatedWaitMinutes: 15,
-      positionInQueue: 2,
-    },
-    {
-      id: 'q-4',
-      token: 'S-011',
-      customerName: 'Priya Verma',
-      customerPhone: '9899112233',
-      serviceIds: ['s-spa'],
-      preferredBarberId: undefined, // Any Barber
-      status: 'Waiting',
-      joinedAt: new Date(Date.now() - 20 * 60000).toISOString(),
-      totalDurationMinutes: 45,
-      totalPrice: 400,
-      estimatedWaitMinutes: 30,
-      positionInQueue: 3,
-    },
-    {
-      id: 'q-5',
-      token: 'S-012',
-      customerName: 'Karan Mehra',
-      customerPhone: '9811223344',
-      serviceIds: ['s-beard', 's-massage'],
-      preferredBarberId: 'b-ravi',
-      status: 'Waiting',
-      joinedAt: new Date(Date.now() - 65 * 60000).toISOString(), // >60m amber
-      totalDurationMinutes: 35,
-      totalPrice: 200,
-      estimatedWaitMinutes: 65,
-      positionInQueue: 4,
-    },
-    {
-      id: 'q-6',
-      token: 'S-013',
-      customerName: 'Aarav Shah',
-      customerPhone: '9844556677',
-      serviceIds: ['s-haircut'],
-      preferredBarberId: 'b-imran',
-      status: 'Waiting',
-      joinedAt: new Date(Date.now() - 15 * 60000).toISOString(),
-      totalDurationMinutes: 30,
-      totalPrice: 150,
-      estimatedWaitMinutes: 50,
-      positionInQueue: 5,
-    },
-    {
-      id: 'q-7',
-      token: 'S-014',
-      customerName: 'Vikram Singh',
-      customerPhone: '9833221100',
-      serviceIds: ['s-haircut', 's-beard'],
-      preferredBarberId: undefined, // Any Barber
-      status: 'Waiting',
-      joinedAt: new Date(Date.now() - 70 * 60000).toISOString(), // >60m amber
-      totalDurationMinutes: 45,
-      totalPrice: 230,
-      estimatedWaitMinutes: 70,
-      positionInQueue: 6,
-    },
-    {
-      id: 'q-8',
-      token: 'S-015',
-      customerName: 'Neha Sharma',
-      customerPhone: '9877889900',
-      serviceIds: ['s-color'],
-      preferredBarberId: undefined, // Any Barber
-      status: 'Waiting',
-      joinedAt: new Date(Date.now() - 80 * 60000).toISOString(), // >60m amber
-      totalDurationMinutes: 60,
-      totalPrice: 500,
-      estimatedWaitMinutes: 85,
-      positionInQueue: 7,
-    },
-  ],
+  queue: INITIAL_QUEUE,
 
   toggleQueueOpen: () => set((state) => ({ isQueueOpen: !state.isQueueOpen })),
 
@@ -549,4 +554,94 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       }),
     }));
   },
+
+  resetToDefaultData: () => {
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('salon_queue_store_v1');
+      }
+    } catch {}
+    set({
+      isQueueOpen: true,
+      barbers: INITIAL_BARBERS,
+      services: DUMMY_SERVICES,
+      tokenCounter: 16,
+      queue: INITIAL_QUEUE,
+    });
+  },
 }));
+
+// Real-Time Cross-Window / Cross-Tab Synchronization via BroadcastChannel
+let syncChannel: BroadcastChannel | null = null;
+let isReceivingBroadcast = false;
+
+if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+  try {
+    syncChannel = new BroadcastChannel('salon_queue_sync_channel');
+    syncChannel.onmessage = (event) => {
+      if (event.data?.type === 'QUEUE_STATE_SYNC' && event.data.payload) {
+        isReceivingBroadcast = true;
+        useQueueStore.setState((prev) => ({
+          ...prev,
+          ...event.data.payload,
+        }));
+        setTimeout(() => {
+          isReceivingBroadcast = false;
+        }, 50);
+      }
+    };
+  } catch (err) {
+    console.warn('BroadcastChannel not initialized:', err);
+  }
+}
+
+// Hydrate from localStorage and synchronize across tabs
+if (typeof window !== 'undefined') {
+  try {
+    const cached = localStorage.getItem('salon_queue_store_v1');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed && Array.isArray(parsed.queue) && Array.isArray(parsed.barbers)) {
+        useQueueStore.setState({
+          isQueueOpen: parsed.isQueueOpen ?? true,
+          barbers: parsed.barbers,
+          services: parsed.services ?? DUMMY_SERVICES,
+          queue: parsed.queue,
+          tokenCounter: parsed.tokenCounter ?? 16,
+        });
+      }
+    }
+  } catch {}
+
+  // Auto-broadcast state changes to other tabs & save to localStorage
+  useQueueStore.subscribe((state) => {
+    try {
+      localStorage.setItem(
+        'salon_queue_store_v1',
+        JSON.stringify({
+          isQueueOpen: state.isQueueOpen,
+          barbers: state.barbers,
+          services: state.services,
+          queue: state.queue,
+          tokenCounter: state.tokenCounter,
+        })
+      );
+    } catch {}
+
+    if (syncChannel && !isReceivingBroadcast) {
+      try {
+        syncChannel.postMessage({
+          type: 'QUEUE_STATE_SYNC',
+          payload: {
+            isQueueOpen: state.isQueueOpen,
+            barbers: state.barbers,
+            services: state.services,
+            queue: state.queue,
+            tokenCounter: state.tokenCounter,
+          },
+        });
+      } catch {}
+    }
+  });
+}
+
