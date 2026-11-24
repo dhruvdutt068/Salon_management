@@ -8,6 +8,7 @@ from app.api.barbers import router as barbers_router
 from app.api.services import router as services_router
 from app.api.stats import router as stats_router
 from app.api.websocket import router as ws_router
+from app.api.auth import router as auth_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -33,6 +34,7 @@ app.add_middleware(
 )
 
 # Register API Routers
+app.include_router(auth_router)
 app.include_router(queue_router)
 app.include_router(barbers_router)
 app.include_router(services_router)

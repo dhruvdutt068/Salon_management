@@ -67,8 +67,50 @@ export interface JoinQueuePayload {
   is_walk_in?: boolean;
 }
 
+function getAuthHeaders(): HeadersInit {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('salon_auth_token_v1') : null;
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
 // REST API Methods
 export const api = {
+  // Authentication
+  async login(username: string, pin: string) {
+    const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, pin }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Login failed' }));
+      throw new Error(err.detail || 'Login failed');
+    }
+    return res.json();
+  },
+
+  async registerCustomer(name: string, phone: string, pin: string) {
+    const res = await fetch(`${API_BASE_URL}/api/auth/customer-register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, phone, pin }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Registration failed' }));
+      throw new Error(err.detail || 'Registration failed');
+    }
+    return res.json();
+  },
+
+  async getMe() {
+    const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error('Not authenticated');
+    return res.json();
+  },
   // Queue
   async getQueue(): Promise<BackendQueueListResponse> {
     const res = await fetch(`${API_BASE_URL}/api/queue`);

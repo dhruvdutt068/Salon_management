@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useLanguageStore } from '../store/useLanguageStore';
 import { useQueueStore } from '../store/useQueueStore';
+import { useAuthStore } from '../store/useAuthStore';
 import {
   Scissors,
   User,
@@ -26,9 +27,10 @@ export const JoinQueuePage: React.FC = () => {
     calculateEstimatedWait,
     joinQueue,
   } = useQueueStore();
+  const { user } = useAuthStore();
 
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [name, setName] = useState(user?.name || '');
+  const [phone, setPhone] = useState(user?.phone || (user?.role === 'customer' ? user.username : ''));
   const [selectedServices, setSelectedServices] = useState<string[]>(['s-haircut']);
   const [selectedBarber, setSelectedBarber] = useState<string>('any');
 

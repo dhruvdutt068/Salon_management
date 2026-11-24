@@ -5,6 +5,8 @@ from app.models.barber import Barber
 from app.models.service import Service
 from app.models.queue_entry import QueueEntry
 from app.models.setting import Setting
+from app.models.user import User
+from app.core.security import hash_pin
 from datetime import datetime, timedelta
 
 def init_db():
@@ -134,6 +136,58 @@ def init_db():
         # Seed Settings if none exist
         if db.query(Setting).filter(Setting.key == "is_queue_open").count() == 0:
             db.add(Setting(key="is_queue_open", value="true"))
+
+        # Seed Users if none exist
+        if db.query(User).count() == 0:
+            users = [
+                User(
+                    id="u-admin",
+                    username="admin",
+                    name="Salon Owner",
+                    hashed_pin=hash_pin("9999"),
+                    role="admin"
+                ),
+                User(
+                    id="u-reception",
+                    username="reception",
+                    name="Front Desk Reception",
+                    hashed_pin=hash_pin("1234"),
+                    role="receptionist"
+                ),
+                User(
+                    id="u-ravi",
+                    username="ravi",
+                    name="Ravi (Senior Stylist)",
+                    hashed_pin=hash_pin("1111"),
+                    role="barber",
+                    barber_id="b-ravi"
+                ),
+                User(
+                    id="u-amit",
+                    username="amit",
+                    name="Amit (Master Stylist)",
+                    hashed_pin=hash_pin("2222"),
+                    role="barber",
+                    barber_id="b-amit"
+                ),
+                User(
+                    id="u-imran",
+                    username="imran",
+                    name="Imran (Hair Specialist)",
+                    hashed_pin=hash_pin("3333"),
+                    role="barber",
+                    barber_id="b-imran"
+                ),
+                User(
+                    id="u-kunal",
+                    username="9876543210",
+                    name="Kunal Patel",
+                    hashed_pin=hash_pin("1234"),
+                    role="customer",
+                    phone="9876543210"
+                ),
+            ]
+            db.add_all(users)
 
         db.commit()
     finally:
