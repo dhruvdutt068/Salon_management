@@ -24,6 +24,8 @@ out/
 .cache/
 *.log
 *.tsbuildinfo
+*.db
+*.sqlite3
 
 # OS & IDE metadata
 .DS_Store
