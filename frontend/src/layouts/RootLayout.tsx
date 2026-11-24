@@ -48,7 +48,7 @@ export const RootLayout: React.FC = () => {
                 to={item.to}
                 end={item.to === '/'}
                 className={({ isActive }) =>
-                  `px-3 py-1.5 rounded-lg text-xs lg:text-sm font-medium transition-all ${
+                  `px-3 py-2 rounded-lg text-xs lg:text-sm font-medium transition-all min-h-[44px] flex items-center ${
                     isActive
                       ? 'bg-[#D4A017] text-gray-950 font-semibold shadow-sm shadow-[#D4A017]/30'
                       : 'text-gray-300 hover:text-white hover:bg-gray-800'
@@ -82,7 +82,7 @@ export const RootLayout: React.FC = () => {
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
-                `px-3 py-1 rounded-md text-xs font-medium whitespace-nowrap min-h-[36px] flex items-center ${
+                `px-3 py-2 rounded-md text-xs font-medium whitespace-nowrap min-h-[44px] flex items-center ${
                   isActive
                     ? 'bg-[#D4A017] text-gray-950 font-bold'
                     : 'text-gray-300 hover:text-white hover:bg-gray-800'
