@@ -17,11 +17,10 @@ export const RootLayout: React.FC = () => {
   };
 
   const getNavItems = () => {
-    // 1. Unauthenticated / Guest
+    // 1. Unauthenticated / Guest: can only view Home, TV Display, and Login
     if (!isAuthenticated || !user) {
       return [
         { to: '/', label: t('navHome') },
-        { to: '/join', label: t('navJoin') },
         { to: '/display', label: t('navDisplay') },
       ];
     }

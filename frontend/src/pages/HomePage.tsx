@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguageStore } from '../store/useLanguageStore';
 import { useQueueStore } from '../store/useQueueStore';
+import { useAuthStore } from '../store/useAuthStore';
 import {
   Users,
   Clock,
@@ -19,9 +20,26 @@ import {
 export const HomePage: React.FC = () => {
   const { t } = useLanguageStore();
   const { barbers, getWaitingCount, getTotalEstimatedWait, isQueueOpen } = useQueueStore();
+  const { user, isAuthenticated } = useAuthStore();
 
   const waitingCount = getWaitingCount();
   const estimatedWait = getTotalEstimatedWait();
+
+  const joinDestination = !isAuthenticated
+    ? '/login?redirect=/join'
+    : user?.role === 'customer' || user?.role === 'admin'
+    ? '/join'
+    : user?.role === 'barber'
+    ? `/barber/${user.username.charAt(0).toUpperCase() + user.username.slice(1)}`
+    : '/reception';
+
+  const joinButtonLabel = !isAuthenticated
+    ? t('signInToJoinCTA')
+    : user?.role === 'customer' || user?.role === 'admin'
+    ? t('joinQueueCTA')
+    : user?.role === 'barber'
+    ? 'Go to My Station'
+    : 'Go to Reception';
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -159,10 +177,10 @@ export const HomePage: React.FC = () => {
       <div className="w-full pt-1">
         {isQueueOpen ? (
           <Link
-            to="/join"
+            to={joinDestination}
             className="w-full min-h-[56px] rounded-2xl bg-gradient-to-r from-[#D4A017] to-amber-600 hover:from-amber-400 hover:to-amber-500 text-gray-950 font-black text-lg flex items-center justify-center space-x-2.5 shadow-xl shadow-[#D4A017]/25 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
           >
-            <span>{t('joinQueueCTA')}</span>
+            <span>{joinButtonLabel}</span>
             <ArrowRight className="w-5 h-5 stroke-[2.5]" />
           </Link>
         ) : (

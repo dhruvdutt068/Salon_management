@@ -18,10 +18,19 @@ export const AppRoutes: React.FC = () => {
       <Route path="/" element={<RootLayout />}>
         {/* Public Routes */}
         <Route index element={<HomePage />} />
-        <Route path="join" element={<JoinQueuePage />} />
         <Route path="status/:id" element={<MyStatusPage />} />
         <Route path="display" element={<DisplayPage />} />
         <Route path="login" element={<LoginPage />} />
+
+        {/* Protected Customer Route (Customer & Admin only) */}
+        <Route
+          path="join"
+          element={
+            <ProtectedRoute allowedRoles={['customer', 'admin']}>
+              <JoinQueuePage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Protected Receptionist Route (Receptionist & Admin) */}
         <Route
