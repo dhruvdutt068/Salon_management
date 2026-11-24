@@ -1,120 +1,365 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useLanguageStore } from '../store/useLanguageStore';
 import { useQueueStore } from '../store/useQueueStore';
-import { Bell, AlertTriangle, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import type { QueueStatus } from '../types';
+import {
+  Bell,
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle2,
+  Clock,
+  Sparkles,
+  Scissors,
+  Check,
+  RotateCcw,
+  Volume2,
+} from 'lucide-react';
 
 export const MyStatusPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { t } = useLanguageStore();
-  const { getEntryByToken, cancelEntry } = useQueueStore();
+  const { t, language } = useLanguageStore();
+  const {
+    getEntryByToken,
+    cancelEntry,
+    updateEntryStatus,
+    setSimulatedPosition,
+    barbers,
+    services,
+  } = useQueueStore();
 
   const tokenParam = id || 'S-014';
   const entry = getEntryByToken(tokenParam);
 
+  // Fallback defaults if visiting a direct token not yet in store
   const token = entry ? entry.token : tokenParam;
-  const position = entry ? entry.positionInQueue : 2;
+  const status: QueueStatus = entry ? entry.status : 'Waiting';
+  const position = entry ? entry.computedPosition : 2;
   const waitMins = entry ? entry.estimatedWaitMinutes : 20;
-  const status = entry ? entry.status : 'Waiting';
-  const customerName = entry ? entry.customerName : 'Demo Customer';
+  const customerName = entry ? entry.customerName : 'Rahul Sharma';
+  const assignedBarber = barbers.find((b) => b.id === entry?.assignedBarberId) || barbers[0];
 
+  const selectedServices = services.filter((s) => entry?.serviceIds.includes(s.id));
+
+  // Modals & local state
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [isCancelled, setIsCancelled] = useState(status === 'Cancelled');
+  const [showCalledModal, setShowCalledModal] = useState(status === 'Called');
+  const [secondsRemaining, setSecondsRemaining] = useState(waitMins * 60);
 
-  const handleCancel = () => {
+  // Auto-trigger full-screen gold alert if status transitions to Called
+  useEffect(() => {
+    if (status === 'Called') {
+      setShowCalledModal(true);
+      playChimeAndVibrate();
+    } else {
+      setShowCalledModal(false);
+    }
+  }, [status]);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (status !== 'Waiting' || secondsRemaining <= 0) return;
+    const interval = setInterval(() => {
+      setSecondsRemaining((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [status, secondsRemaining]);
+
+  // Audio chime & phone vibration synthesis
+  const playChimeAndVibrate = () => {
+    try {
+      // Gentle dual-tone chime using Web Audio API
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+
+        // Tone 1
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(587.33, now); // D5
+        gain1.gain.setValueAtTime(0.3, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.6);
+
+        // Tone 2 (Higher, pleasing harmonic)
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(880, now + 0.25); // A5
+        gain2.gain.setValueAtTime(0.35, now + 0.25);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + 0.25);
+        osc2.stop(now + 1.2);
+      }
+
+      // Phone vibration API (gentle pulse: vibrate 200ms, pause 100ms, vibrate 200ms)
+      if (navigator.vibrate) {
+        navigator.vibrate([250, 100, 250]);
+      }
+    } catch {
+      // Audio/vibrate unavailable or blocked by browser policy
+    }
+  };
+
+  const handleCancelSpot = () => {
     cancelEntry(token);
-    setIsCancelled(true);
     setShowCancelModal(false);
+  };
+
+  // Circular timer calculations
+  const totalSeconds = Math.max(waitMins * 60, 60);
+  const progressPercent = Math.min(100, Math.max(0, (secondsRemaining / totalSeconds) * 100));
+  const circleRadius = 58;
+  const circumference = 2 * Math.PI * circleRadius;
+  const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
+
+  const displayMinutes = Math.floor(secondsRemaining / 60);
+  const displaySeconds = secondsRemaining % 60;
+
+  // Simulator actions for demonstration
+  const handleSimulateStatus = (newStatus: QueueStatus, newPos: number) => {
+    updateEntryStatus(token, newStatus, assignedBarber.id);
+    setSimulatedPosition(token, newPos);
+    if (newStatus === 'Waiting') {
+      setSecondsRemaining(newPos === 2 ? 12 * 60 : 35 * 60);
+    }
   };
 
   return (
     <div className="max-w-xl mx-auto w-full py-4 sm:py-6 space-y-6 text-center">
-      {/* Back to Home Link */}
-      <div className="text-left">
-        <Link to="/" className="inline-flex items-center text-xs text-gray-400 hover:text-white min-h-[44px]">
+      {/* Top Bar with Back Link */}
+      <div className="flex items-center justify-between">
+        <Link
+          to="/"
+          className="inline-flex items-center text-xs text-gray-400 hover:text-white min-h-[44px]"
+        >
           <ArrowLeft className="w-4 h-4 mr-1.5" />
           {t('backHomeBtn')}
         </Link>
+        <div className="flex items-center space-x-1 text-xs text-[#D4A017] font-semibold">
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Live Token Tracker</span>
+        </div>
       </div>
 
       {/* Screen Title */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white">{t('statusTitle')}</h1>
-        <p className="text-xs text-gray-400 mt-1">Hello, <strong className="text-gray-200">{customerName}</strong></p>
+      <div className="space-y-1">
+        <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+          {t('statusTitle')}
+        </h1>
+        <p className="text-xs sm:text-sm text-gray-400">
+          Customer: <strong className="text-gray-200">{customerName}</strong>
+          {selectedServices.length > 0 && (
+            <span> • {selectedServices.map((s) => (language === 'gu' ? s.nameGu : s.nameEn)).join(', ')}</span>
+          )}
+        </p>
       </div>
 
-      {/* Token Hero Card */}
+      {/* Main Token & Status Card */}
       <div className="bg-[#111827] rounded-3xl border-2 border-[#D4A017] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-        <div className="absolute -top-12 -right-12 w-32 h-32 bg-[#D4A017]/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -top-16 -right-16 w-40 h-40 bg-[#D4A017]/10 rounded-full blur-3xl pointer-events-none" />
+
         <p className="text-xs uppercase tracking-widest text-[#D4A017] font-black mb-1">
           {t('tokenLabel')}
         </p>
-        <p className="text-5xl sm:text-6xl font-black text-white font-mono tracking-wider">{token}</p>
+        <p className="text-6xl sm:text-7xl font-black text-white font-mono tracking-widest my-2">
+          {token}
+        </p>
 
-        {isCancelled ? (
-          <div className="mt-5 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm font-bold">
-            This queue spot has been cancelled.
+        {/* State-Specific Content */}
+        {status === 'Cancelled' ? (
+          <div className="mt-4 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 space-y-2">
+            <p className="font-bold text-base">{t('statusCancelledTitle')}</p>
+            <p className="text-xs text-gray-400">{t('statusCancelledDesc')}</p>
+            <Link
+              to="/join"
+              className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-[#D4A017] text-gray-950 font-bold text-xs min-h-[44px] mt-2"
+            >
+              {t('rejoinQueueBtn')}
+            </Link>
+          </div>
+        ) : status === 'Completed' ? (
+          <div className="mt-4 p-5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 space-y-2">
+            <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
+            <p className="font-bold text-lg text-white">{t('statusCompletedTitle')}</p>
+            <p className="text-xs text-gray-300">{t('statusCompletedDesc')}</p>
+            <Link
+              to="/join"
+              className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-[#D4A017] text-gray-950 font-bold text-xs min-h-[44px] mt-2"
+            >
+              {t('rejoinQueueBtn')}
+            </Link>
+          </div>
+        ) : status === 'In Chair' ? (
+          <div className="mt-4 p-5 rounded-2xl bg-[#D4A017]/10 border border-[#D4A017]/40 space-y-2">
+            <Scissors className="w-10 h-10 text-[#D4A017] mx-auto animate-bounce" />
+            <p className="font-bold text-lg text-white">{t('statusInChairTitle')}</p>
+            <p className="text-xs text-gray-300">
+              {t('statusInChairDesc')} With stylist: <strong className="text-[#D4A017]">{assignedBarber.name}</strong>
+            </p>
           </div>
         ) : (
-          <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4">
-            <div className="bg-gray-800/80 rounded-2xl p-3 border border-gray-700">
-              <p className="text-xs text-gray-400 font-semibold">{t('positionLabel')}</p>
-              <p className="text-2xl font-black text-white mt-0.5">#{position}</p>
+          /* Waiting Status: Circular Countdown & Position */
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-6">
+            {/* SVG Circular Countdown Ring */}
+            <div className="relative w-36 h-36 flex items-center justify-center">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 140 140">
+                {/* Background Ring */}
+                <circle
+                  cx="70"
+                  cy="70"
+                  r={circleRadius}
+                  stroke="#374151"
+                  strokeWidth="8"
+                  fill="transparent"
+                />
+                {/* Progress Ring */}
+                <circle
+                  cx="70"
+                  cy="70"
+                  r={circleRadius}
+                  stroke="#D4A017"
+                  strokeWidth="8"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  fill="transparent"
+                  className="transition-all duration-1000 ease-linear"
+                />
+              </svg>
+              {/* Inner Countdown Text */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <Clock className="w-4 h-4 text-[#D4A017] mb-0.5" />
+                <span className="text-xl font-mono font-black text-white">
+                  {displayMinutes}:{displaySeconds.toString().padStart(2, '0')}
+                </span>
+                <span className="text-[10px] text-gray-400 uppercase font-semibold">
+                  {t('estimatedWaitLabel')}
+                </span>
+              </div>
             </div>
-            <div className="bg-gray-800/80 rounded-2xl p-3 border border-gray-700">
-              <p className="text-xs text-gray-400 font-semibold">{t('estimatedWaitLabel')}</p>
-              <p className="text-2xl font-black text-[#D4A017] mt-0.5">~{waitMins} min</p>
+
+            {/* Position Stat Card */}
+            <div className="flex-1 w-full sm:w-auto bg-gray-800/80 rounded-2xl p-4 border border-gray-700 space-y-1 text-center sm:text-left">
+              <p className="text-xs uppercase tracking-wider text-gray-400 font-bold">
+                {t('positionLabel')}
+              </p>
+              <div className="flex items-baseline justify-center sm:justify-start space-x-2">
+                <span className="text-4xl font-black text-white">#{position}</span>
+                <span className="text-xs text-amber-400 font-semibold">in line</span>
+              </div>
+              <p className="text-xs text-gray-400 pt-1">
+                Barber: <strong className="text-gray-200">{assignedBarber.name}</strong>
+              </p>
             </div>
           </div>
         )}
       </div>
 
-      {/* 2nd in queue banner alert */}
-      {!isCancelled && position === 2 && (
-        <div className="bg-amber-500/15 border-2 border-[#D4A017] rounded-2xl p-4 flex items-center space-x-3 text-left animate-pulse">
-          <Bell className="w-6 h-6 text-[#D4A017] shrink-0" />
-          <div>
-            <p className="text-sm font-bold text-amber-300">{t('alertStartComing')}</p>
-            <p className="text-xs text-gray-300">Your assigned chair will be ready shortly.</p>
+      {/* "Start coming to the salon" Alert Banner (Triggered when 2nd in line) */}
+      {status === 'Waiting' && position === 2 && (
+        <div className="bg-gradient-to-r from-amber-500/20 via-amber-600/25 to-amber-500/20 border-2 border-[#D4A017] rounded-3xl p-5 flex items-start space-x-3.5 text-left shadow-lg animate-pulse">
+          <div className="w-10 h-10 rounded-xl bg-[#D4A017] text-gray-950 flex items-center justify-center shrink-0 shadow-md">
+            <Bell className="w-6 h-6 stroke-[2.5]" />
+          </div>
+          <div className="space-y-0.5">
+            <h3 className="text-base font-extrabold text-amber-300">
+              {t('alertStartComing')}
+            </h3>
+            <p className="text-xs text-gray-200">
+              {t('alertStartComingSub')}
+            </p>
           </div>
         </div>
       )}
 
-      {/* Status Progress Tracker */}
-      <div className="bg-[#111827]/85 rounded-3xl border border-gray-700/60 p-5 text-left space-y-4">
+      {/* Progress Timeline */}
+      <div className="bg-[#111827]/85 rounded-3xl border border-gray-700/60 p-5 sm:p-6 text-left space-y-4 shadow-xl">
         <h3 className="text-xs font-bold uppercase text-gray-400 tracking-wider">
-          Progress Timeline
+          Queue Progress
         </h3>
-        <div className="space-y-3">
-          <div className="flex items-center space-x-3 text-sm">
-            <div className="w-6 h-6 rounded-full bg-[#D4A017] text-gray-950 font-black flex items-center justify-center text-xs">
-              ✓
+        <div className="grid grid-cols-4 gap-2 text-center text-xs">
+          {/* Step 1: Waiting */}
+          <div className="space-y-1.5">
+            <div
+              className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center font-bold text-xs ${
+                status === 'Waiting'
+                  ? 'bg-[#D4A017] text-gray-950 ring-4 ring-[#D4A017]/20 font-black'
+                  : status === 'Cancelled'
+                  ? 'bg-rose-500/20 text-rose-400'
+                  : 'bg-emerald-500 text-gray-950'
+              }`}
+            >
+              {status !== 'Waiting' && status !== 'Cancelled' ? <Check className="w-4 h-4 stroke-[3]" /> : '1'}
             </div>
-            <span className="font-bold text-white">{t('statusStepWaiting')}</span>
+            <p className={`font-semibold ${status === 'Waiting' ? 'text-white' : 'text-gray-400'}`}>
+              {t('statusStepWaiting')}
+            </p>
           </div>
-          <div className="flex items-center space-x-3 text-sm opacity-50">
-            <div className="w-6 h-6 rounded-full bg-gray-700 text-gray-300 flex items-center justify-center text-xs font-bold">
-              2
+
+          {/* Step 2: Called */}
+          <div className="space-y-1.5">
+            <div
+              className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center font-bold text-xs ${
+                status === 'Called'
+                  ? 'bg-[#D4A017] text-gray-950 ring-4 ring-[#D4A017]/20 font-black'
+                  : status === 'In Chair' || status === 'Completed'
+                  ? 'bg-emerald-500 text-gray-950'
+                  : 'bg-gray-800 text-gray-400 border border-gray-700'
+              }`}
+            >
+              {status === 'In Chair' || status === 'Completed' ? <Check className="w-4 h-4 stroke-[3]" /> : '2'}
             </div>
-            <span>{t('statusStepCalled')}</span>
+            <p className={`font-semibold ${status === 'Called' ? 'text-white' : 'text-gray-400'}`}>
+              {t('statusStepCalled')}
+            </p>
           </div>
-          <div className="flex items-center space-x-3 text-sm opacity-50">
-            <div className="w-6 h-6 rounded-full bg-gray-700 text-gray-300 flex items-center justify-center text-xs font-bold">
-              3
+
+          {/* Step 3: In Chair */}
+          <div className="space-y-1.5">
+            <div
+              className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center font-bold text-xs ${
+                status === 'In Chair'
+                  ? 'bg-[#D4A017] text-gray-950 ring-4 ring-[#D4A017]/20 font-black'
+                  : status === 'Completed'
+                  ? 'bg-emerald-500 text-gray-950'
+                  : 'bg-gray-800 text-gray-400 border border-gray-700'
+              }`}
+            >
+              {status === 'Completed' ? <Check className="w-4 h-4 stroke-[3]" /> : '3'}
             </div>
-            <span>{t('statusStepInChair')}</span>
+            <p className={`font-semibold ${status === 'In Chair' ? 'text-white' : 'text-gray-400'}`}>
+              {t('statusStepInChair')}
+            </p>
           </div>
-          <div className="flex items-center space-x-3 text-sm opacity-50">
-            <div className="w-6 h-6 rounded-full bg-gray-700 text-gray-300 flex items-center justify-center text-xs font-bold">
+
+          {/* Step 4: Completed */}
+          <div className="space-y-1.5">
+            <div
+              className={`w-8 h-8 rounded-full mx-auto flex items-center justify-center font-bold text-xs ${
+                status === 'Completed'
+                  ? 'bg-emerald-500 text-gray-950 ring-4 ring-emerald-500/20 font-black'
+                  : 'bg-gray-800 text-gray-400 border border-gray-700'
+              }`}
+            >
               4
             </div>
-            <span>{t('statusStepDone')}</span>
+            <p className={`font-semibold ${status === 'Completed' ? 'text-white' : 'text-gray-400'}`}>
+              {t('statusStepDone')}
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Cancel Spot Button */}
-      {!isCancelled && (
+      {/* Cancel Spot Button (Only allowed during Waiting status per rules) */}
+      {status === 'Waiting' && (
         <div>
           <button
             type="button"
@@ -130,21 +375,21 @@ export const MyStatusPage: React.FC = () => {
       {showCancelModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gray-900 border border-gray-700 rounded-3xl p-6 max-w-sm w-full space-y-4 text-center shadow-2xl">
-            <AlertTriangle className="w-10 h-10 text-amber-500 mx-auto" />
-            <h3 className="text-base font-bold text-white">{t('cancelConfirmTitle')}</h3>
-            <p className="text-xs text-gray-400">If you cancel, you will lose your spot in line.</p>
+            <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto" />
+            <h3 className="text-lg font-black text-white">{t('cancelConfirmTitle')}</h3>
+            <p className="text-xs text-gray-400">{t('cancelConfirmDesc')}</p>
             <div className="flex space-x-3 pt-2">
               <button
                 type="button"
                 onClick={() => setShowCancelModal(false)}
-                className="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold min-h-[44px] cursor-pointer"
+                className="flex-1 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-bold min-h-[44px] cursor-pointer"
               >
                 {t('cancelConfirmNo')}
               </button>
               <button
                 type="button"
-                onClick={handleCancel}
-                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold min-h-[44px] cursor-pointer"
+                onClick={handleCancelSpot}
+                className="flex-1 py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold min-h-[44px] cursor-pointer"
               >
                 {t('cancelConfirmYes')}
               </button>
@@ -152,6 +397,96 @@ export const MyStatusPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Full-Screen Gold "It's your turn!" Modal when Called */}
+      {showCalledModal && (
+        <div className="fixed inset-0 bg-gradient-to-b from-[#f6c845] via-[#D4A017] to-amber-700 z-50 flex flex-col items-center justify-center p-6 text-center text-gray-950 animate-in fade-in duration-300">
+          <div className="max-w-md w-full space-y-6">
+            {/* Pulsing Bell Icon with sound badge */}
+            <div className="w-24 h-24 rounded-full bg-gray-950/15 border-4 border-gray-950/20 flex items-center justify-center mx-auto animate-bounce shadow-2xl">
+              <Bell className="w-12 h-12 text-gray-950 stroke-[2.5]" />
+            </div>
+
+            <div className="space-y-2">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-gray-950/10 text-gray-950">
+                <Volume2 className="w-3.5 h-3.5 mr-1" />
+                Notification Chime
+              </span>
+              <h2 className="text-4xl sm:text-5xl font-black tracking-tight text-gray-950">
+                {t('alertItsYourTurn')}
+              </h2>
+              <p className="text-lg font-bold text-gray-900">
+                {t('alertGoToBarber')}: <span className="underline decoration-2 font-black">{assignedBarber.name}</span>
+              </p>
+            </div>
+
+            {/* Token Badge */}
+            <div className="bg-gray-950/90 text-white rounded-3xl p-5 border border-gray-900 shadow-2xl">
+              <p className="text-xs uppercase tracking-widest text-[#D4A017] font-bold">Your Token</p>
+              <p className="text-5xl font-mono font-black text-[#D4A017] mt-1">{token}</p>
+            </div>
+
+            {/* Action button */}
+            <button
+              type="button"
+              onClick={() => setShowCalledModal(false)}
+              className="w-full py-4 rounded-2xl bg-gray-950 hover:bg-gray-900 text-white font-black text-base shadow-2xl transition-all cursor-pointer min-h-[56px]"
+            >
+              {t('chairHeadingBtn')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Simulator Bar (For TA/testing automated states easily) */}
+      <div className="bg-gray-900/90 rounded-2xl border border-gray-800 p-4 space-y-2.5 text-left">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center">
+            <RotateCcw className="w-3.5 h-3.5 mr-1 text-[#D4A017]" />
+            {t('simulatorTitle')}
+          </p>
+          <span className="text-[10px] text-gray-500 font-mono">TA Verification</span>
+        </div>
+        <p className="text-[11px] text-gray-400">{t('simulatorDesc')}</p>
+
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 pt-1">
+          <button
+            type="button"
+            onClick={() => handleSimulateStatus('Waiting', 3)}
+            className="px-2 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-[11px] font-semibold min-h-[36px]"
+          >
+            {t('simPos3')}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSimulateStatus('Waiting', 2)}
+            className="px-2 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[11px] font-bold border border-amber-500/30 min-h-[36px]"
+          >
+            {t('simPos2')}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSimulateStatus('Called', 1)}
+            className="px-2 py-1.5 rounded-lg bg-[#D4A017] hover:bg-amber-400 text-gray-950 text-[11px] font-black min-h-[36px]"
+          >
+            {t('simCalled')}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSimulateStatus('In Chair', 0)}
+            className="px-2 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[11px] font-semibold min-h-[36px]"
+          >
+            {t('simInChair')}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSimulateStatus('Completed', 0)}
+            className="px-2 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-[11px] font-semibold min-h-[36px]"
+          >
+            {t('simDone')}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

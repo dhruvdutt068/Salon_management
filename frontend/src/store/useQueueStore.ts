@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Barber, Service, QueueEntry } from '../types';
+import type { Barber, Service, QueueEntry, QueueStatus } from '../types';
 import { DUMMY_SERVICES, DUMMY_BARBERS } from '../constants/dummyData';
 
 interface JoinQueuePayload {
@@ -31,8 +31,10 @@ interface QueueState {
   calculateEstimatedWait: (selectedDurationMinutes: number, preferredBarberId?: string) => number;
   isPhoneInQueue: (phone: string) => { inQueue: boolean; entry?: QueueEntry };
   joinQueue: (payload: JoinQueuePayload) => JoinQueueResult;
-  getEntryByToken: (token: string) => QueueEntry | undefined;
+  getEntryByToken: (token: string) => (QueueEntry & { computedPosition: number }) | undefined;
   cancelEntry: (token: string) => boolean;
+  updateEntryStatus: (token: string, newStatus: QueueStatus, barberId?: string) => void;
+  setSimulatedPosition: (token: string, pos: number) => void;
 }
 
 export const useQueueStore = create<QueueState>((set, get) => ({
@@ -85,7 +87,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       totalDurationMinutes: 30,
       totalPrice: 150,
       estimatedWaitMinutes: 15,
-      positionInQueue: 2,
+      positionInQueue: 1,
     },
     {
       id: 'q-4',
@@ -99,7 +101,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       totalDurationMinutes: 45,
       totalPrice: 400,
       estimatedWaitMinutes: 30,
-      positionInQueue: 3,
+      positionInQueue: 2,
     },
     {
       id: 'q-5',
@@ -113,7 +115,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       totalDurationMinutes: 35,
       totalPrice: 200,
       estimatedWaitMinutes: 45,
-      positionInQueue: 4,
+      positionInQueue: 3,
     },
   ],
 
@@ -131,7 +133,6 @@ export const useQueueStore = create<QueueState>((set, get) => ({
   getTotalEstimatedWait: () => {
     const waitingItems = get().queue.filter((item) => item.status === 'Waiting');
     const totalMinutes = waitingItems.reduce((acc, item) => acc + item.totalDurationMinutes, 0);
-    // Number of available working barbers (not on break)
     const workingBarbers = get().barbers.filter((b) => b.status !== 'On Break').length || 1;
     return Math.max(10, Math.round(totalMinutes / workingBarbers));
   },
@@ -141,25 +142,21 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     const barbers = get().barbers;
     const workingBarbers = barbers.filter((b) => b.status !== 'On Break').length || 1;
 
-    // Filter relevant customers ahead
     let durationAhead = 0;
     const activeWaiting = queue.filter((item) => item.status === 'Waiting');
 
     if (preferredBarberId && preferredBarberId !== 'any') {
-      // Waiting only for this barber: all people who chose this barber or 'Any'
       for (const item of activeWaiting) {
         if (!item.preferredBarberId || item.preferredBarberId === preferredBarberId) {
           durationAhead += item.totalDurationMinutes;
         }
       }
-      // If barber is currently busy in chair, add estimated remaining time (approx 15 min)
       const barber = barbers.find((b) => b.id === preferredBarberId);
       if (barber?.status === 'Busy') {
         durationAhead += 15;
       }
       return Math.max(10, durationAhead);
     } else {
-      // Any barber (fastest): sum of all waiting duration / working barbers
       for (const item of activeWaiting) {
         durationAhead += item.totalDurationMinutes;
       }
@@ -193,7 +190,6 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       };
     }
 
-    // Calculate totals
     const services = state.services.filter((s) => serviceIds.includes(s.id));
     const totalDuration = services.reduce((acc, s) => acc + s.durationMinutes, 0);
     const totalPrice = services.reduce((acc, s) => acc + s.price, 0);
@@ -228,7 +224,20 @@ export const useQueueStore = create<QueueState>((set, get) => ({
   },
 
   getEntryByToken: (token: string) => {
-    return get().queue.find((item) => item.token.toLowerCase() === token.toLowerCase());
+    const queue = get().queue;
+    const entry = queue.find((item) => item.token.toLowerCase() === token.toLowerCase());
+    if (!entry) return undefined;
+
+    const waitingItems = queue.filter((item) => item.status === 'Waiting');
+    const waitingIndex = waitingItems.findIndex((item) => item.id === entry.id);
+    const computedPosition =
+      entry.status === 'Waiting'
+        ? (waitingIndex >= 0 ? waitingIndex + 1 : entry.positionInQueue)
+        : entry.status === 'Called'
+        ? 1
+        : 0;
+
+    return { ...entry, computedPosition };
   },
 
   cancelEntry: (token: string) => {
@@ -237,11 +246,40 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       queue: state.queue.map((item) => {
         if (item.token.toLowerCase() === token.toLowerCase() && item.status === 'Waiting') {
           cancelled = true;
-          return { ...item, status: 'Cancelled' };
+          return { ...item, status: 'Cancelled' as QueueStatus };
         }
         return item;
       }),
     }));
     return cancelled;
+  },
+
+  updateEntryStatus: (token: string, newStatus: QueueStatus, barberId?: string) => {
+    set((state) => ({
+      queue: state.queue.map((item) => {
+        if (item.token.toLowerCase() === token.toLowerCase()) {
+          return {
+            ...item,
+            status: newStatus,
+            assignedBarberId: barberId || item.assignedBarberId,
+            calledAt: newStatus === 'Called' ? new Date().toISOString() : item.calledAt,
+            startedAt: newStatus === 'In Chair' ? new Date().toISOString() : item.startedAt,
+            completedAt: newStatus === 'Completed' ? new Date().toISOString() : item.completedAt,
+          };
+        }
+        return item;
+      }),
+    }));
+  },
+
+  setSimulatedPosition: (token: string, pos: number) => {
+    set((state) => ({
+      queue: state.queue.map((item) => {
+        if (item.token.toLowerCase() === token.toLowerCase()) {
+          return { ...item, positionInQueue: pos };
+        }
+        return item;
+      }),
+    }));
   },
 }));
