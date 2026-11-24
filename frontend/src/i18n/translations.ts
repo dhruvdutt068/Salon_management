@@ -6,6 +6,7 @@ export const translations = {
     openStatus: 'Open',
     closedStatus: 'Closed',
     closingBadge: 'Open · Closes 9 PM',
+    queueClosedBadge: 'Online Queue Closed',
     languageToggle: 'ગુજરાતી',
 
     // Nav Links
@@ -17,17 +18,28 @@ export const translations = {
     navDisplay: 'TV Display',
     navAdmin: 'Settings',
 
+    // Salon Highlights
+    highlightAc: 'Air Conditioned',
+    highlightHygiene: 'Sanitized Tools',
+    highlightStylists: 'Master Stylists',
+    highlightWifi: 'Free Wi-Fi',
+
     // Screen 1: Home
-    homeWelcome: 'Skip the waiting room. Join line from your phone.',
+    homeWelcome: 'Skip the salon waiting room. Join the live queue from your phone.',
     liveQueueTitle: 'Live Queue Status',
-    peopleWaiting: 'people waiting',
+    peopleWaiting: 'people waiting in line',
     aboutWait: 'about',
     minWait: 'min wait',
     barberAvailability: 'Barbers on Duty',
     joinQueueCTA: 'Join Queue Now',
+    queueClosedCTA: 'Online Queue is Closed',
+    queueClosedNote: 'Online registration is currently closed. Walk-ins are welcome at the counter.',
     statusAvailable: 'Available',
     statusBusy: 'Busy',
     statusOnBreak: 'On Break',
+    barberBusyWith: 'Serving',
+    barberIdleReady: 'Ready for next client',
+    barberBreakNotice: 'Currently taking a break',
 
     // Screen 2: Join Queue
     joinTitle: 'Join the Queue',
@@ -37,17 +49,21 @@ export const translations = {
     phoneLabel: '10-Digit Mobile Number',
     phonePlaceholder: 'e.g. 9876543210',
     servicesLabel: 'Select Services (Max 3)',
-    barberLabel: 'Select Barber',
+    barberLabel: 'Select Preferred Barber',
     anyBarber: 'Any Barber (Fastest)',
     summaryTitle: 'Booking Summary',
     totalTime: 'Total Time',
     totalAmount: 'Total Price',
     expectedWait: 'Estimated Wait',
     confirmJoinBtn: 'Confirm & Get Token',
-    phoneError: 'Please enter a valid 10-digit phone number',
-    nameError: 'Please enter your name',
-    serviceLimitError: 'You can select up to 3 services',
-    noServiceError: 'Please select at least one service',
+    phoneError: 'Please enter a valid 10-digit mobile number (e.g. 9876543210)',
+    nameError: 'Please enter your name (at least 2 characters)',
+    serviceLimitError: 'Maximum 3 services can be selected.',
+    noServiceError: 'Please select at least one service to proceed.',
+    duplicatePhoneError: 'This phone number already has an active spot in queue (#token).',
+    viewExistingSpot: 'View Your Active Spot',
+    selectServicePrompt: 'Tap services to add them (up to 3)',
+    barberSelectedNote: 'Will only be served by',
 
     // Screen 3: My Status
     statusTitle: 'Your Queue Status',
@@ -120,6 +136,7 @@ export const translations = {
     openStatus: 'ચાલુ છે',
     closedStatus: 'બંધ છે',
     closingBadge: 'ચાલુ છે · રાત્રે ૯ વાગ્યે બંધ થશે',
+    queueClosedBadge: 'ઓનલાઈન કતાર બંધ છે',
     languageToggle: 'English',
 
     // Nav Links
@@ -131,17 +148,28 @@ export const translations = {
     navDisplay: 'ટીવી ડિસ્પ્લે',
     navAdmin: 'સેટિંગ્સ',
 
+    // Salon Highlights
+    highlightAc: 'વાતાનુકૂલિત (AC)',
+    highlightHygiene: 'સેનિટાઈઝ્ડ સાધનો',
+    highlightStylists: 'અનુભવી સ્ટાઈલિસ્ટ',
+    highlightWifi: 'મફત વાઇ-ફાઇ',
+
     // Screen 1: Home
-    homeWelcome: 'વેઇટિંગ રૂમમાં બેસવાનું ટાળો. તમારા ફોનથી જ કતારમાં જોડાવો.',
+    homeWelcome: 'વેઇટિંગ રૂમમાં બેસવાનું ટાળો. તમારા ફોનથી જ લાઈવ કતારમાં જોડાવો.',
     liveQueueTitle: 'લાઈવ કતાર સ્ટેટસ',
-    peopleWaiting: 'લોકો કતારમાં છે',
+    peopleWaiting: 'લોકો કતારમાં પ્રતીક્ષા કરી રહ્યા છે',
     aboutWait: 'અંદાજે',
     minWait: 'મિનિટ રાહ',
     barberAvailability: 'હાજર વાળંદ',
     joinQueueCTA: 'કતારમાં હમણાં જ જોડાવો',
+    queueClosedCTA: 'ઓનલાઈન કતાર હાલ બંધ છે',
+    queueClosedNote: 'ઓનલાઈન રજીસ્ટ્રેશન હાલ બંધ છે. કાઉન્ટર પર આવીને જોડાઈ શકો છો.',
     statusAvailable: 'ઉપલબ્ધ',
     statusBusy: 'વ્યસ્ત',
     statusOnBreak: 'વિરામ પર',
+    barberBusyWith: 'સેવારત',
+    barberIdleReady: 'નવા ગ્રાહક માટે તૈયાર',
+    barberBreakNotice: 'હાલ વિરામ (Break) પર છે',
 
     // Screen 2: Join Queue
     joinTitle: 'કતારમાં જોડાવો',
@@ -151,17 +179,21 @@ export const translations = {
     phoneLabel: '૧૦ અંકનો મોબાઈલ નંબર',
     phonePlaceholder: 'દા.ત. 9876543210',
     servicesLabel: 'સેવાઓ પસંદ કરો (મહત્તમ ૩)',
-    barberLabel: 'વાળંદ પસંદ કરો',
+    barberLabel: 'મનપસંદ વાળંદ પસંદ કરો',
     anyBarber: 'કોઈપણ વાળંદ (સૌથી ઝડપી)',
     summaryTitle: 'બુકિંગ સારાંશ',
     totalTime: 'કુલ સમય',
     totalAmount: 'કુલ કિંમત',
     expectedWait: 'અંદાજિત પ્રતીક્ષા સમય',
-    confirmJoinBtn: 'ટોકન કન્ફર્મ કરો',
-    phoneError: 'કૃપા કરીને માન્ય ૧૦ અંકનો મોબાઈલ નંબર દાખલ કરો',
-    nameError: 'કૃપા કરીને તમારું નામ દાખલ કરો',
-    serviceLimitError: 'તમે વધુમાં વધુ ૩ સેવાઓ પસંદ કરી શકો છો',
-    noServiceError: 'કૃપા કરીને ઓછામાં ઓછી એક સેવા પસંદ કરો',
+    confirmJoinBtn: 'ટોકન મેળવો અને કન્ફર્મ કરો',
+    phoneError: 'કૃપા કરીને માન્ય ૧૦ અંકનો મોબાઈલ નંબર દાખલ કરો (દા.ત. 9876543210)',
+    nameError: 'કૃપા કરીને તમારું પૂરું નામ લખો (ઓછામાં ઓછા ૨ અક્ષર)',
+    serviceLimitError: 'તમે વધુમાં વધુ ૩ સેવાઓ પસંદ કરી શકો છો.',
+    noServiceError: 'કૃપા કરીને આગળ વધવા ઓછામાં ઓછી ૧ સેવા પસંદ કરો.',
+    duplicatePhoneError: 'આ મોબાઈલ નંબર પહેલેથી જ કતારમાં નોંધાયેલ છે (#token).',
+    viewExistingSpot: 'તમારો હાલનો ટોકન જુઓ',
+    selectServicePrompt: 'સેવા ઉમેરવા માટે ટેપ કરો (મહત્તમ ૩)',
+    barberSelectedNote: 'માત્ર આ વાળંદ દ્વારા સેવા અપાશે:',
 
     // Screen 3: My Status
     statusTitle: 'તમારી કતારનું સ્ટેટસ',
