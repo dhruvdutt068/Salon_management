@@ -2,14 +2,15 @@ import { create } from 'zustand';
 import type { Barber, Service, QueueEntry, QueueStatus } from '../types';
 import { DUMMY_SERVICES, DUMMY_BARBERS } from '../constants/dummyData';
 
-interface JoinQueuePayload {
+export interface JoinQueuePayload {
   customerName: string;
   customerPhone: string;
   serviceIds: string[];
   preferredBarberId?: string;
+  isWalkIn?: boolean;
 }
 
-interface JoinQueueResult {
+export interface JoinQueueResult {
   success: boolean;
   token?: string;
   error?: 'duplicate_phone' | 'queue_closed' | 'invalid_input';
@@ -33,27 +34,49 @@ interface QueueState {
   joinQueue: (payload: JoinQueuePayload) => JoinQueueResult;
   getEntryByToken: (token: string) => (QueueEntry & { computedPosition: number }) | undefined;
   cancelEntry: (token: string) => boolean;
+  markNoShow: (token: string) => boolean;
   updateEntryStatus: (token: string, newStatus: QueueStatus, barberId?: string) => void;
+  callNextForBarber: (barberId: string) => { success: boolean; customer?: QueueEntry; message?: string };
+  completeBarberService: (barberId: string) => void;
   setSimulatedPosition: (token: string, pos: number) => void;
 }
 
 export const useQueueStore = create<QueueState>((set, get) => ({
   isQueueOpen: true,
-  barbers: DUMMY_BARBERS,
+  barbers: [
+    {
+      id: 'b-ravi',
+      name: 'Ravi',
+      status: 'Busy',
+      currentCustomerToken: 'S-008',
+      currentCustomerName: 'Rohan Gupta',
+      serviceStartTime: new Date(Date.now() - 18 * 60000).toISOString(),
+    },
+    {
+      id: 'b-amit',
+      name: 'Amit',
+      status: 'Available',
+    },
+    {
+      id: 'b-imran',
+      name: 'Imran',
+      status: 'On Break',
+    },
+  ],
   services: DUMMY_SERVICES,
-  tokenCounter: 14, // Next token will be S-014
+  tokenCounter: 16, // Next token will be S-016
   queue: [
     {
       id: 'q-1',
-      token: 'S-009',
-      customerName: 'Kunal Patel',
-      customerPhone: '9876543210',
+      token: 'S-008',
+      customerName: 'Rohan Gupta',
+      customerPhone: '9811002211',
       serviceIds: ['s-haircut'],
       preferredBarberId: 'b-ravi',
       assignedBarberId: 'b-ravi',
       status: 'In Chair',
-      joinedAt: new Date(Date.now() - 35 * 60000).toISOString(),
-      startedAt: new Date(Date.now() - 15 * 60000).toISOString(),
+      joinedAt: new Date(Date.now() - 40 * 60000).toISOString(),
+      startedAt: new Date(Date.now() - 18 * 60000).toISOString(),
       totalDurationMinutes: 30,
       totalPrice: 150,
       estimatedWaitMinutes: 0,
@@ -61,14 +84,14 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     },
     {
       id: 'q-2',
-      token: 'S-010',
-      customerName: 'Aarav Mehta',
-      customerPhone: '9822334455',
+      token: 'S-009',
+      customerName: 'Kunal Patel',
+      customerPhone: '9876543210',
       serviceIds: ['s-haircut', 's-beard'],
       preferredBarberId: 'b-amit',
       assignedBarberId: 'b-amit',
       status: 'Called',
-      joinedAt: new Date(Date.now() - 25 * 60000).toISOString(),
+      joinedAt: new Date(Date.now() - 30 * 60000).toISOString(),
       calledAt: new Date(Date.now() - 2 * 60000).toISOString(),
       totalDurationMinutes: 45,
       totalPrice: 230,
@@ -77,45 +100,87 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     },
     {
       id: 'q-3',
-      token: 'S-011',
+      token: 'S-010',
       customerName: 'Devang Joshi',
       customerPhone: '9877001122',
       serviceIds: ['s-haircut'],
-      preferredBarberId: undefined,
+      preferredBarberId: 'b-amit',
       status: 'Waiting',
-      joinedAt: new Date(Date.now() - 20 * 60000).toISOString(),
+      joinedAt: new Date(Date.now() - 25 * 60000).toISOString(),
       totalDurationMinutes: 30,
       totalPrice: 150,
       estimatedWaitMinutes: 15,
-      positionInQueue: 1,
-    },
-    {
-      id: 'q-4',
-      token: 'S-012',
-      customerName: 'Priya Verma',
-      customerPhone: '9899112233',
-      serviceIds: ['s-spa'],
-      preferredBarberId: undefined,
-      status: 'Waiting',
-      joinedAt: new Date(Date.now() - 15 * 60000).toISOString(),
-      totalDurationMinutes: 45,
-      totalPrice: 400,
-      estimatedWaitMinutes: 30,
       positionInQueue: 2,
     },
     {
+      id: 'q-4',
+      token: 'S-011',
+      customerName: 'Priya Verma',
+      customerPhone: '9899112233',
+      serviceIds: ['s-spa'],
+      preferredBarberId: undefined, // Any Barber
+      status: 'Waiting',
+      joinedAt: new Date(Date.now() - 20 * 60000).toISOString(),
+      totalDurationMinutes: 45,
+      totalPrice: 400,
+      estimatedWaitMinutes: 30,
+      positionInQueue: 3,
+    },
+    {
       id: 'q-5',
-      token: 'S-013',
+      token: 'S-012',
       customerName: 'Karan Mehra',
       customerPhone: '9811223344',
       serviceIds: ['s-beard', 's-massage'],
       preferredBarberId: 'b-ravi',
       status: 'Waiting',
-      joinedAt: new Date(Date.now() - 10 * 60000).toISOString(),
+      joinedAt: new Date(Date.now() - 65 * 60000).toISOString(), // >60m amber
       totalDurationMinutes: 35,
       totalPrice: 200,
-      estimatedWaitMinutes: 45,
-      positionInQueue: 3,
+      estimatedWaitMinutes: 65,
+      positionInQueue: 4,
+    },
+    {
+      id: 'q-6',
+      token: 'S-013',
+      customerName: 'Aarav Shah',
+      customerPhone: '9844556677',
+      serviceIds: ['s-haircut'],
+      preferredBarberId: 'b-imran',
+      status: 'Waiting',
+      joinedAt: new Date(Date.now() - 15 * 60000).toISOString(),
+      totalDurationMinutes: 30,
+      totalPrice: 150,
+      estimatedWaitMinutes: 50,
+      positionInQueue: 5,
+    },
+    {
+      id: 'q-7',
+      token: 'S-014',
+      customerName: 'Vikram Singh',
+      customerPhone: '9833221100',
+      serviceIds: ['s-haircut', 's-beard'],
+      preferredBarberId: undefined, // Any Barber
+      status: 'Waiting',
+      joinedAt: new Date(Date.now() - 70 * 60000).toISOString(), // >60m amber
+      totalDurationMinutes: 45,
+      totalPrice: 230,
+      estimatedWaitMinutes: 70,
+      positionInQueue: 6,
+    },
+    {
+      id: 'q-8',
+      token: 'S-015',
+      customerName: 'Neha Sharma',
+      customerPhone: '9877889900',
+      serviceIds: ['s-color'],
+      preferredBarberId: undefined, // Any Barber
+      status: 'Waiting',
+      joinedAt: new Date(Date.now() - 80 * 60000).toISOString(), // >60m amber
+      totalDurationMinutes: 60,
+      totalPrice: 500,
+      estimatedWaitMinutes: 85,
+      positionInQueue: 7,
     },
   ],
 
@@ -243,8 +308,13 @@ export const useQueueStore = create<QueueState>((set, get) => ({
   cancelEntry: (token: string) => {
     let cancelled = false;
     set((state) => ({
+      barbers: state.barbers.map((b) =>
+        b.currentCustomerToken?.toLowerCase() === token.toLowerCase()
+          ? { ...b, status: 'Available' as const, currentCustomerToken: undefined, currentCustomerName: undefined }
+          : b
+      ),
       queue: state.queue.map((item) => {
-        if (item.token.toLowerCase() === token.toLowerCase() && item.status === 'Waiting') {
+        if (item.token.toLowerCase() === token.toLowerCase() && (item.status === 'Waiting' || item.status === 'Called')) {
           cancelled = true;
           return { ...item, status: 'Cancelled' as QueueStatus };
         }
@@ -252,6 +322,99 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       }),
     }));
     return cancelled;
+  },
+
+  markNoShow: (token: string) => {
+    let marked = false;
+    set((state) => ({
+      barbers: state.barbers.map((b) =>
+        b.currentCustomerToken?.toLowerCase() === token.toLowerCase()
+          ? { ...b, status: 'Available' as const, currentCustomerToken: undefined, currentCustomerName: undefined }
+          : b
+      ),
+      queue: state.queue.map((item) => {
+        if (item.token.toLowerCase() === token.toLowerCase()) {
+          marked = true;
+          return { ...item, status: 'No-show' as QueueStatus };
+        }
+        return item;
+      }),
+    }));
+    return marked;
+  },
+
+  // Call Next rule according to docs/03-flows-rules.md:
+  // "Call next for barber X picks the earliest customer who chose X or 'Any'.
+  // A customer who chose Ravi is never given to another barber."
+  callNextForBarber: (barberId: string) => {
+    const state = get();
+    const barber = state.barbers.find((b) => b.id === barberId);
+    if (!barber) return { success: false, message: 'Barber not found.' };
+
+    if (barber.status === 'On Break') {
+      return { success: false, message: `${barber.name} is currently on break.` };
+    }
+
+    // Find earliest waiting customer matching barberId or Any
+    const eligibleCustomer = state.queue.find(
+      (item) =>
+        item.status === 'Waiting' &&
+        (!item.preferredBarberId || item.preferredBarberId === barberId)
+    );
+
+    if (!eligibleCustomer) {
+      return {
+        success: false,
+        message: `No eligible waiting customers for ${barber.name} (checked specific preference and 'Any barber').`,
+      };
+    }
+
+    // Transition customer to Called and assign to barber
+    set((s) => ({
+      barbers: s.barbers.map((b) =>
+        b.id === barberId
+          ? {
+              ...b,
+              status: 'Busy' as const,
+              currentCustomerToken: eligibleCustomer.token,
+              currentCustomerName: eligibleCustomer.customerName,
+              serviceStartTime: new Date().toISOString(),
+            }
+          : b
+      ),
+      queue: s.queue.map((item) =>
+        item.id === eligibleCustomer.id
+          ? {
+              ...item,
+              status: 'Called' as QueueStatus,
+              assignedBarberId: barberId,
+              calledAt: new Date().toISOString(),
+            }
+          : item
+      ),
+    }));
+
+    return { success: true, customer: eligibleCustomer };
+  },
+
+  completeBarberService: (barberId: string) => {
+    set((state) => {
+      const barber = state.barbers.find((b) => b.id === barberId);
+      const activeToken = barber?.currentCustomerToken;
+
+      return {
+        barbers: state.barbers.map((b) =>
+          b.id === barberId
+            ? { ...b, status: 'Available' as const, currentCustomerToken: undefined, currentCustomerName: undefined }
+            : b
+        ),
+        queue: state.queue.map((item) =>
+          activeToken && item.token.toLowerCase() === activeToken.toLowerCase()
+            ? { ...item, status: 'Completed' as QueueStatus, completedAt: new Date().toISOString() }
+            : item
+        ),
+      };
+    });
   },
 
   updateEntryStatus: (token: string, newStatus: QueueStatus, barberId?: string) => {
