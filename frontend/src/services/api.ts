@@ -1,5 +1,11 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws';
+const isBrowser = typeof window !== 'undefined';
+const defaultApiUrl = isBrowser && window.location.hostname !== 'localhost' ? '' : 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : defaultApiUrl);
+
+const defaultWsUrl = isBrowser
+  ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/ws`
+  : 'ws://localhost:8000/ws';
+const WS_BASE_URL = import.meta.env.VITE_WS_URL ?? (import.meta.env.PROD ? defaultWsUrl : 'ws://localhost:8000/ws');
 
 export interface BackendService {
   id: string;
