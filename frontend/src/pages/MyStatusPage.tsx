@@ -14,7 +14,11 @@ import {
   Check,
   RotateCcw,
   Volume2,
+  ShieldAlert,
+  LogIn,
+  ArrowRight,
 } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
 
 export const MyStatusPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,7 +30,9 @@ export const MyStatusPage: React.FC = () => {
     setSimulatedPosition,
     barbers,
     services,
+    queue,
   } = useQueueStore();
+  const { user, isAuthenticated } = useAuthStore();
 
   const tokenParam = id || 'S-014';
   const entry = getEntryByToken(tokenParam);
@@ -131,6 +137,96 @@ export const MyStatusPage: React.FC = () => {
       setSecondsRemaining(newPos === 2 ? 12 * 60 : 35 * 60);
     }
   };
+
+  // Find my own ticket if any
+  const myTicket = queue.find(
+    (q) =>
+      (user && (q.customerPhone === user.phone || q.customerPhone === user.username)) ||
+      (typeof window !== 'undefined' && q.token === localStorage.getItem('my_active_token'))
+  );
+
+  // Check if current user is authorized to view this ticket
+  const isAuthorized = (() => {
+    // 1. Staff roles (Admin & Receptionist) can inspect any ticket for support
+    if (user?.role === 'admin' || user?.role === 'receptionist') {
+      return true;
+    }
+
+    // 2. If ticket does not exist in store, cannot view
+    if (!entry) {
+      return false;
+    }
+
+    // 3. If logged in as customer:
+    if (user?.role === 'customer') {
+      return entry.customerPhone === user.phone || entry.customerPhone === user.username;
+    }
+
+    // 4. If logged in as barber:
+    if (user?.role === 'barber') {
+      return entry.assignedBarberId === user.barber_id || entry.preferredBarberId === user.barber_id;
+    }
+
+    // 5. Unauthenticated / Guest:
+    // Only allowed if this ticket was created in their current browser session
+    const localActiveToken = typeof window !== 'undefined' ? localStorage.getItem('my_active_token') : null;
+    return !!localActiveToken && localActiveToken.toUpperCase() === entry.token.toUpperCase();
+  })();
+
+  // Customer Privacy Barrier Screen
+  if (!isAuthorized) {
+    return (
+      <div className="max-w-md mx-auto my-12 p-8 bg-gray-900 border-2 border-rose-500/40 rounded-3xl text-center space-y-5 shadow-2xl">
+        <div className="w-16 h-16 bg-rose-500/10 text-rose-400 rounded-2xl flex items-center justify-center mx-auto border border-rose-500/30">
+          <ShieldAlert className="w-9 h-9" />
+        </div>
+        <div className="space-y-1.5">
+          <h2 className="text-xl font-black text-white">Private Queue Ticket</h2>
+          <p className="text-xs text-rose-300 font-mono font-bold">Ticket: {tokenParam}</p>
+        </div>
+        <p className="text-xs text-gray-400 leading-relaxed">
+          This ticket belongs to another customer and cannot be viewed. For privacy and security, you can only view tickets associated with your account or phone number.
+        </p>
+
+        <div className="space-y-2 pt-2">
+          {myTicket && myTicket.token !== tokenParam && (
+            <Link
+              to={`/status/${myTicket.token}`}
+              className="w-full py-3 px-4 rounded-xl bg-[#D4A017] text-gray-950 font-black text-xs flex items-center justify-center min-h-[44px] shadow-lg shadow-[#D4A017]/20"
+            >
+              <span>Go to My Active Ticket ({myTicket.token})</span>
+              <ArrowRight className="w-4 h-4 ml-1.5" />
+            </Link>
+          )}
+
+          {!isAuthenticated && (
+            <Link
+              to="/login"
+              className="w-full py-3 px-4 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold text-xs flex items-center justify-center min-h-[44px] border border-gray-700"
+            >
+              <LogIn className="w-4 h-4 mr-1.5" />
+              <span>Sign In to Verify Ownership</span>
+            </Link>
+          )}
+
+          <Link
+            to="/join"
+            className="w-full py-3 px-4 rounded-xl bg-gray-800/60 hover:bg-gray-800 text-gray-300 font-semibold text-xs flex items-center justify-center min-h-[44px]"
+          >
+            <span>Join the Live Queue</span>
+          </Link>
+
+          <Link
+            to="/"
+            className="w-full py-2.5 px-4 text-xs text-gray-400 hover:text-white flex items-center justify-center min-h-[44px]"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            <span>Return to Home</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-xl mx-auto w-full py-4 sm:py-6 space-y-6 text-center">

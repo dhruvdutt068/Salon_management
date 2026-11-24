@@ -128,6 +128,9 @@ export const JoinQueuePage: React.FC = () => {
     });
 
     if (result.success && result.token) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('my_active_token', result.token);
+      }
       navigate(`/status/${result.token}`);
     } else if (result.error === 'duplicate_phone' && result.existingToken) {
       setDuplicateError({

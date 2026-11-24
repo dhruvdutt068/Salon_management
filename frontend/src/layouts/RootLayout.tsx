@@ -2,11 +2,13 @@ import React from 'react';
 import { NavLink, Outlet, Link, useNavigate } from 'react-router-dom';
 import { useLanguageStore } from '../store/useLanguageStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { useQueueStore } from '../store/useQueueStore';
 import { Scissors, Globe, Clock, User, LogOut, LogIn, ShieldCheck } from 'lucide-react';
 
 export const RootLayout: React.FC = () => {
   const { t, language, toggleLanguage } = useLanguageStore();
   const { user, isAuthenticated, logout } = useAuthStore();
+  const { queue } = useQueueStore();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -14,15 +16,65 @@ export const RootLayout: React.FC = () => {
     navigate('/login');
   };
 
-  const navItems = [
-    { to: '/', label: t('navHome') },
-    { to: '/join', label: t('navJoin') },
-    { to: '/status/S-014', label: t('navStatus') },
-    { to: '/reception', label: t('navReception') },
-    { to: '/barber/Amit', label: t('navBarber') },
-    { to: '/display', label: t('navDisplay') },
-    { to: '/admin', label: t('navAdmin') },
-  ];
+  const getNavItems = () => {
+    // 1. Unauthenticated / Guest
+    if (!isAuthenticated || !user) {
+      return [
+        { to: '/', label: t('navHome') },
+        { to: '/join', label: t('navJoin') },
+        { to: '/display', label: t('navDisplay') },
+      ];
+    }
+
+    // 2. Customer: can only see Home, Join Queue, My Status, and TV Display
+    if (user.role === 'customer') {
+      const activeEntry = queue.find(
+        (q) =>
+          (q.customerPhone === user.phone || q.customerPhone === user.username) &&
+          (q.status === 'Waiting' || q.status === 'Called' || q.status === 'In Chair')
+      );
+      const customerToken =
+        activeEntry?.token ||
+        (typeof window !== 'undefined' ? localStorage.getItem('my_active_token') : null) ||
+        'S-009';
+
+      return [
+        { to: '/', label: t('navHome') },
+        { to: '/join', label: t('navJoin') },
+        { to: `/status/${customerToken}`, label: t('navStatus') },
+        { to: '/display', label: t('navDisplay') },
+      ];
+    }
+
+    // 3. Barber: can only see their dedicated workstation and TV Display
+    if (user.role === 'barber') {
+      const stylistName = user.username.charAt(0).toUpperCase() + user.username.slice(1);
+      return [
+        { to: `/barber/${stylistName}`, label: `My Station (${stylistName})` },
+        { to: '/display', label: t('navDisplay') },
+      ];
+    }
+
+    // 4. Receptionist: can see Reception Dashboard, TV Display, and Home
+    if (user.role === 'receptionist') {
+      return [
+        { to: '/reception', label: t('navReception') },
+        { to: '/display', label: t('navDisplay') },
+        { to: '/', label: t('navHome') },
+      ];
+    }
+
+    // 5. Admin / Owner: Full operational visibility
+    return [
+      { to: '/', label: t('navHome') },
+      { to: '/reception', label: t('navReception') },
+      { to: '/barber/Amit', label: t('navBarber') },
+      { to: '/display', label: t('navDisplay') },
+      { to: '/admin', label: t('navAdmin') },
+    ];
+  };
+
+  const navItems = getNavItems();
 
   return (
     <div className="min-h-screen bg-[#1F2937] text-gray-100 flex flex-col font-sans selection:bg-[#D4A017] selection:text-black">
