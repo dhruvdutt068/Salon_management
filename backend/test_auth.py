@@ -55,20 +55,7 @@ def run_auth_tests():
         assert imran_data["user"]["barber_id"] == "b-imran"
         print("Barber Imran login OK! Chair:", imran_data["user"]["barber_id"])
 
-        print("=== 4. Test Customer Phone Login ===")
-        res_cust = client.post("/api/auth/login", json={"username": "9876543210", "pin": "1234"})
-        assert res_cust.status_code == 200
-        cust_data = res_cust.json()
-        assert cust_data["user"]["role"] == "customer"
-        assert cust_data["user"]["name"] == "Kunal Patel"
-        print("Customer login OK! Name:", cust_data["user"]["name"])
-
-        print("=== 5. Test Invalid Credentials ===")
-        res_bad = client.post("/api/auth/login", json={"username": "admin", "pin": "wrongpin"})
-        assert res_bad.status_code == 401
-        print("Invalid PIN properly rejected with 401:", res_bad.json()["detail"])
-
-        print("=== 6. Test Customer Registration ===")
+        print("=== 4. Test Customer Registration & Login ===")
         new_cust_phone = "9812345678"
         res_reg = client.post("/api/auth/customer-register", json={
             "name": "Manish Sharma",
@@ -81,6 +68,14 @@ def run_auth_tests():
         assert new_cust_data["user"]["username"] == new_cust_phone
         print("Customer registration OK! User:", new_cust_data["user"]["name"])
 
+        # Customer Login with newly registered credentials
+        res_cust = client.post("/api/auth/login", json={"username": new_cust_phone, "pin": "5555"})
+        assert res_cust.status_code == 200
+        cust_data = res_cust.json()
+        assert cust_data["user"]["role"] == "customer"
+        assert cust_data["user"]["name"] == "Manish Sharma"
+        print("Customer login OK! Name:", cust_data["user"]["name"])
+
         # Duplicate registration fails
         res_reg_dup = client.post("/api/auth/customer-register", json={
             "name": "Another Person",
@@ -89,6 +84,11 @@ def run_auth_tests():
         })
         assert res_reg_dup.status_code == 409
         print("Duplicate customer registration properly rejected with 409!")
+
+        print("=== 5. Test Invalid Credentials ===")
+        res_bad = client.post("/api/auth/login", json={"username": "admin", "pin": "wrongpin"})
+        assert res_bad.status_code == 401
+        print("Invalid PIN properly rejected with 401:", res_bad.json()["detail"])
 
         print("=== 7. Test /api/auth/me Profile ===")
         # Authenticated

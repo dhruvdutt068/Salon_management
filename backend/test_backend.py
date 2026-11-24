@@ -123,11 +123,17 @@ def run_tests():
         assert res_walkin.status_code == 201
         imran_token = res_walkin.json()["token"]
 
-        # Toggle Imran break off (Imran starts On Break)
-        res_break = client.post("/api/barbers/b-imran/break")
-        assert res_break.status_code == 200
-        assert res_break.json()["status"] == "Available"
-        print("Toggled Imran from On Break to Available")
+        # Toggle Imran break on (Imran starts Available -> On Break)
+        res_break_on = client.post("/api/barbers/b-imran/break")
+        assert res_break_on.status_code == 200
+        assert res_break_on.json()["status"] == "On Break"
+        print("Toggled Imran from Available to On Break")
+
+        # Toggle Imran break off (Imran becomes Available again)
+        res_break_off = client.post("/api/barbers/b-imran/break")
+        assert res_break_off.status_code == 200
+        assert res_break_off.json()["status"] == "Available"
+        print("Toggled Imran from On Break back to Available")
 
         # Call Next for Imran
         res_call = client.post("/api/queue/call-next", json={"barber_id": "b-imran"})

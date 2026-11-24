@@ -86,10 +86,6 @@ export const useAuthStore = create<AuthState>((set) => ({
         pin: '3333',
         user: { id: 'u-imran', username: 'imran', name: 'Imran (Hair Specialist)', role: 'barber', barber_id: 'b-imran' },
       },
-      '9876543210': {
-        pin: '1234',
-        user: { id: 'u-kunal', username: '9876543210', name: 'Kunal Patel', role: 'customer', phone: '9876543210' },
-      },
     };
 
     try {
