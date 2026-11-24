@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { Barber, Service, QueueEntry, QueueStatus } from '../types';
-import { DUMMY_SERVICES, DUMMY_BARBERS } from '../constants/dummyData';
+import { DUMMY_SERVICES } from '../constants/dummyData';
 
 export interface JoinQueuePayload {
   customerName: string;
@@ -37,7 +37,10 @@ interface QueueState {
   markNoShow: (token: string) => boolean;
   updateEntryStatus: (token: string, newStatus: QueueStatus, barberId?: string) => void;
   callNextForBarber: (barberId: string) => { success: boolean; customer?: QueueEntry; message?: string };
+  startBarberService: (barberId: string) => void;
   completeBarberService: (barberId: string) => void;
+  toggleBarberBreak: (barberId: string) => void;
+  getNextCustomerForBarber: (barberId: string) => QueueEntry | undefined;
   setSimulatedPosition: (token: string, pos: number) => void;
 }
 
@@ -55,7 +58,10 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     {
       id: 'b-amit',
       name: 'Amit',
-      status: 'Available',
+      status: 'Busy',
+      currentCustomerToken: 'S-009',
+      currentCustomerName: 'Kunal Patel',
+      serviceStartTime: new Date(Date.now() - 5 * 60000).toISOString(),
     },
     {
       id: 'b-imran',
@@ -92,7 +98,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       assignedBarberId: 'b-amit',
       status: 'Called',
       joinedAt: new Date(Date.now() - 30 * 60000).toISOString(),
-      calledAt: new Date(Date.now() - 2 * 60000).toISOString(),
+      calledAt: new Date(Date.now() - 5 * 60000).toISOString(),
       totalDurationMinutes: 45,
       totalPrice: 230,
       estimatedWaitMinutes: 5,
@@ -343,9 +349,6 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     return marked;
   },
 
-  // Call Next rule according to docs/03-flows-rules.md:
-  // "Call next for barber X picks the earliest customer who chose X or 'Any'.
-  // A customer who chose Ravi is never given to another barber."
   callNextForBarber: (barberId: string) => {
     const state = get();
     const barber = state.barbers.find((b) => b.id === barberId);
@@ -355,7 +358,6 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       return { success: false, message: `${barber.name} is currently on break.` };
     }
 
-    // Find earliest waiting customer matching barberId or Any
     const eligibleCustomer = state.queue.find(
       (item) =>
         item.status === 'Waiting' &&
@@ -369,7 +371,6 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       };
     }
 
-    // Transition customer to Called and assign to barber
     set((s) => ({
       barbers: s.barbers.map((b) =>
         b.id === barberId
@@ -397,6 +398,27 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     return { success: true, customer: eligibleCustomer };
   },
 
+  startBarberService: (barberId: string) => {
+    set((state) => {
+      const barber = state.barbers.find((b) => b.id === barberId);
+      const activeToken = barber?.currentCustomerToken;
+      const now = new Date().toISOString();
+
+      return {
+        barbers: state.barbers.map((b) =>
+          b.id === barberId
+            ? { ...b, status: 'Busy' as const, serviceStartTime: now }
+            : b
+        ),
+        queue: state.queue.map((item) =>
+          activeToken && item.token.toLowerCase() === activeToken.toLowerCase()
+            ? { ...item, status: 'In Chair' as QueueStatus, startedAt: now }
+            : item
+        ),
+      };
+    });
+  },
+
   completeBarberService: (barberId: string) => {
     set((state) => {
       const barber = state.barbers.find((b) => b.id === barberId);
@@ -405,7 +427,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       return {
         barbers: state.barbers.map((b) =>
           b.id === barberId
-            ? { ...b, status: 'Available' as const, currentCustomerToken: undefined, currentCustomerName: undefined }
+            ? { ...b, status: 'Available' as const, currentCustomerToken: undefined, currentCustomerName: undefined, serviceStartTime: undefined }
             : b
         ),
         queue: state.queue.map((item) =>
@@ -415,6 +437,27 @@ export const useQueueStore = create<QueueState>((set, get) => ({
         ),
       };
     });
+  },
+
+  toggleBarberBreak: (barberId: string) => {
+    set((state) => ({
+      barbers: state.barbers.map((b) => {
+        if (b.id === barberId) {
+          const nextStatus = b.status === 'On Break' ? 'Available' : 'On Break';
+          return { ...b, status: nextStatus };
+        }
+        return b;
+      }),
+    }));
+  },
+
+  getNextCustomerForBarber: (barberId: string) => {
+    const queue = get().queue;
+    return queue.find(
+      (item) =>
+        item.status === 'Waiting' &&
+        (!item.preferredBarberId || item.preferredBarberId === barberId)
+    );
   },
 
   updateEntryStatus: (token: string, newStatus: QueueStatus, barberId?: string) => {
